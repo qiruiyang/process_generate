@@ -13,24 +13,40 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <sched.h>
+#include <string.h>
 
 #define CURR_THREAD 0
 
-int main(void)
+int main(int argc, char **argv)
 {
-	int ret, ret_child_1, ret_child_2, ret_child_3, ret_child_4;
+	int ret, ret_child_1, ret_child_2, ret_child_3, ret_child_4, scheduler;
 	struct sched_param param;
 	struct timeval start, now;
 	long long unsigned i = 0;
+	
+	if (argc != 2 || (strncmp(argv[1], "normal", 6) && strncmp(argv[1], "rr", 2) && strncmp(argv[1], "fifo", 4))) {
+		fprintf(stderr, "error selecting scheduler, make sure to choose normal or rr or fifo\n");
+		return -1;
+	}
+
+	if (!strncmp(argv[1], "rr", 2))
+		scheduler = SCHED_RR;
+	else if (!strncmp(argv[1], "fifo", 4))
+		scheduler = SCHED_FIFO;
+	else
+		scheduler = SCHED_OTHER;
 
 	/*
 	 * Retrieves the scheduling parameters from the current process.
 	 */
 	gettimeofday(&start, NULL);
 	ret = sched_getparam(CURR_THREAD, &param);
-	param.sched_priority = 94;
-	if (sched_setscheduler(CURR_THREAD, SCHED_RR, &param) == -1)
+	if (scheduler == SCHED_RR || scheduler == SCHED_FIFO)
+		param.sched_priority = 94;
+	if (sched_setscheduler(CURR_THREAD, scheduler, &param) == -1) {
 		fprintf(stderr, "error setting scheduler, make sure you are root\n");
+		return -1;
+	}
 
 	while (1) {
 		i++;
@@ -39,6 +55,7 @@ int main(void)
 				start.tv_sec * 1000000 - start.tv_usec) >= 3200000)
 			break;
 	}
+
 	/*
 	 * Call fork() to create a child process. You now have two processes.
 	 */
@@ -52,13 +69,14 @@ int main(void)
 		printf("Child 1-%d. My pid is %d and my parent's pid is %d\n", getpid(),
 			getpid(), getppid());
 
-	 	param.sched_priority = 94;
+		if (scheduler == SCHED_RR || scheduler == SCHED_FIFO)
+	 		param.sched_priority = 94;
 
 		/*
 		 * Change the child 1 process to FIFO scheduling policy.
 		 * The sched_setscheduler() returns 0 on success and -1 on failure.
 		 */
-		if (sched_setscheduler(CURR_THREAD, SCHED_RR, &param) == -1) {
+		if (sched_setscheduler(CURR_THREAD, scheduler, &param) == -1) {
 			fprintf(stderr, "error setting scheduler, make sure you are root\n");
 		}
 	}
@@ -71,12 +89,14 @@ int main(void)
 	if (ret_child_2 == 0){
 		printf("Child 2-%d. My pid is %d and my parent's pid is %d\n", getpid(),
 			getpid(), getppid());
-		param.sched_priority = 95;
+		
+		if (scheduler == SCHED_RR || scheduler == SCHED_FIFO)
+			param.sched_priority = 95;
 
 		/*
 		 * Change the child 2 processes to Round Robin scheduling policy.
 		 */
-		if (sched_setscheduler(CURR_THREAD, SCHED_RR, &param) == -1) {
+		if (sched_setscheduler(CURR_THREAD, scheduler, &param) == -1) {
 			fprintf(stderr, "error setting scheduler, maker sure you are root\n");
 		}
 
@@ -89,12 +109,14 @@ int main(void)
 	if (ret_child_3 == 0){
 		printf("Child 3-%d. My pid is %d and my parent's pid is %d\n", getpid(),
 			getpid(), getppid());
-		param.sched_priority = 96;
+
+		if (scheduler == SCHED_RR || scheduler == SCHED_FIFO)
+			param.sched_priority = 96;
 
 		/*
 		 * Change the child 3 processes to batch.
 		 */
-		if (sched_setscheduler(CURR_THREAD, SCHED_RR, &param) == -1) {
+		if (sched_setscheduler(CURR_THREAD, scheduler, &param) == -1) {
 			fprintf(stderr, "error setting scheduler, maker sure you are root\n");
 		}
 	}
@@ -106,12 +128,14 @@ int main(void)
 	if (ret_child_4 == 0){
 		printf("Child 4-%d. My pid is %d and my parent's pid is %d\n", getpid(),
 			getpid(), getppid());
-		param.sched_priority = 97;
+
+		if (scheduler == SCHED_RR || scheduler == SCHED_FIFO)
+			param.sched_priority = 97;
 
 		/*
 		 * Change the child 3 processes to batch.
 		 */
-		if (sched_setscheduler(CURR_THREAD, SCHED_FIFO, &param) == -1) {
+		if (sched_setscheduler(CURR_THREAD, scheduler, &param) == -1) {
 			fprintf(stderr, "error setting scheduler, maker sure you are root\n");
 		}
 	}
